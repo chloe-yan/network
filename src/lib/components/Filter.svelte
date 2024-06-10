@@ -1,45 +1,44 @@
 <script>
     import { onDestroy } from 'svelte';
     import { filteredStore, groupStore } from '../stores/networkStore';
+    import { degreeBuckets } from './utils'
+
+    // let groups = [];
+    let filteredBuckets = [];
   
-    let groups = [];
-    let filteredGroups = [];
+    // const unsubscribeGroups = groupStore.subscribe(d => {
+    //   groups = d;
+    // });
   
-    const unsubscribeGroups = groupStore.subscribe(d => {
-      groups = d;
-    });
-  
-    const unsubscribeFilteredGroups = filteredStore.subscribe(d => {
-      filteredGroups = d;
+    const unsubscribeFilteredBuckets = filteredStore.subscribe(d => {
+      filteredBuckets = d;
     });
   
     onDestroy(() => {
-      unsubscribeGroups();
-      unsubscribeFilteredGroups();
+      // unsubscribeGroups();
+      unsubscribeFilteredBuckets();
     });
   
     const handleClick = (e) => {
       // Toggle group from filtered set
-      const groupId = e.target.dataset.group;
-      const group = groups.find(g => g.id == groupId);
-      console.log(group)
-  
-      if (filteredGroups.includes(group)) {
-        filteredStore.set(filteredGroups.filter(g => g.id != groupId)); // Remove group
+      const bucketId = e.target.dataset.bucket;
+
+      if (filteredBuckets.includes(bucketId)) {
+        filteredStore.set(filteredBuckets.filter(b => b != bucketId)); // Remove group
       } else {
-        filteredStore.set([...filteredGroups, group]); // Add group
+        filteredStore.set([...filteredBuckets, bucketId]); // Add group
       }
     };
   </script>
   
   <div id='filter'>
-    {#each groups as group}
+    {#each degreeBuckets as bucket}
       <button 
-        on:click={handleClick} 
-        data-group={group.id} 
-        data-selected={filteredGroups.includes(group)} 
-        style={`--filter-color: ${group.color}`}>
-        {group.id}
+        on:click={handleClick}
+        data-bucket={bucket.id}
+        data-selected={filteredBuckets.includes(bucket.id)} 
+        style={`--filter-color: rgb(0, 0, 0, ${0.2 + 0.12 * bucket.id})`}>
+        {bucket.max ? `${bucket.min}-${bucket.max}` : `${bucket.min}+`} 
       </button>
     {/each}
   </div>
@@ -48,6 +47,7 @@
     #filter {
         display: flex;
         flex-direction: row;
+        justify-content: center;
         background: white;
         border-radius: 12px;
         box-shadow: 2px 2px 12px 4px hsla(0,0%,82%,.294);
@@ -62,7 +62,7 @@
         display: flex;
         flex-direction: column;
         align-items: center;
-        padding-top: 2px;
+        padding-top: 4px;
         padding-bottom: 8px;
         border-radius: 10px;
     }

@@ -8,13 +8,13 @@
 
     const unsubscribeData = dataStore.subscribe(d => allNodes = d.nodes);
     const unsubscribeGroups = groupStore.subscribe(d => groups = d);
-    const unsubscribeFilteredGroups = filteredStore.subscribe(groups => {
-        filteredNodes = allNodes.filter(node => groups.find(g => g.id == node.group)).sort((a, b) => b.degree - a.degree)
-    });
+	const unsubscribeFilteredBuckets = filteredStore.subscribe(d => {
+		filteredNodes = allNodes.filter(node => d.find(bucket => bucket == node.degreeBucket)).sort((a, b) => b.degree - a.degree);;
+	});
     onDestroy(() => {
         unsubscribeData();
         unsubscribeGroups()
-        unsubscribeFilteredGroups()
+        unsubscribeFilteredBuckets()
     });
 </script>
 
@@ -69,7 +69,7 @@
 
     #node-header {
         width: 100%;
-        max-width: 150px;
+        min-width: 130px;
     }
 
     #deg-header {

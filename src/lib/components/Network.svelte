@@ -2,6 +2,7 @@
 	import { onMount, onDestroy } from 'svelte';
 	import * as d3 from 'd3';
 	import { dataStore, filteredStore, groupStore } from '../stores/networkStore';
+    import { degreeBuckets } from './utils'
 
 	let network;
 	let allNodes = [];
@@ -11,14 +12,14 @@
 	let updateVisualization = () => {}
 
 	const unsubscribeData = dataStore.subscribe(d => allNodes = d.nodes);
-	const unsubscribeFilteredGroups = filteredStore.subscribe(d => {
-		filteredNodes = allNodes.filter(node => d.some(group => group.id === node.group));
+	const unsubscribeFilteredBuckets = filteredStore.subscribe(d => {
+		filteredNodes = allNodes.filter(node => d.find(bucket => bucket == node.degreeBucket));
 		updateVisualization();
 	});
 
 	onDestroy(() => {
 		unsubscribeData();
-		unsubscribeFilteredGroups();
+		unsubscribeFilteredBuckets();
 	});
 
 	onMount(async function () {
@@ -35,8 +36,14 @@
 
 		nodes = d3.map(nodes, node => {
 			const { index, name, group } = node;
-			return { index, name, group, degree: degrees[index] ? degrees[index] : 0 };
+			const degree = degrees[index] ? degrees[index] : 0;
+			let degreeBucket = 0;
+			while (degreeBuckets[degreeBucket].max != null && degree > degreeBuckets[degreeBucket].max) {
+				degreeBucket++;
+			}			
+			return { index, name, group, degree, degreeBucket };
 		});
+		
 		links = d3.map(links, l => l);
 		dataStore.set({ nodes, links });
 
@@ -48,7 +55,7 @@
 
 		const groups = groupArr.map(group => { return { id: group, color: colors(group) } });
 		groupStore.set(groups);
-		filteredStore.set(groups);
+		filteredStore.set(degreeBuckets.map(bucket => bucket.id));
 
 		let simulation = d3.forceSimulation(nodes)
 			.force("link", d3.forceManyBody())
