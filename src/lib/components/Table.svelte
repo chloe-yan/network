@@ -48,6 +48,7 @@
         height: 300px;
         display: block;
         overflow: scroll;
+        color: #232323;
     }
 
     .node-name::before {

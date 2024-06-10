@@ -52,6 +52,7 @@
         border-radius: 12px;
         box-shadow: 2px 2px 12px 4px hsla(0,0%,82%,.294);
         padding: 6px 10px;
+        color: #232323;
     }
     
     button {
