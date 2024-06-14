@@ -11,10 +11,11 @@
 	const unsubscribeFilteredBuckets = filteredStore.subscribe(d => {
 		filteredNodes = allNodes.filter(node => d.find(bucket => bucket == node.degreeBucket)).sort((a, b) => b.degree - a.degree);;
 	});
+
     onDestroy(() => {
         unsubscribeData();
-        unsubscribeGroups()
-        unsubscribeFilteredBuckets()
+        unsubscribeGroups();
+        unsubscribeFilteredBuckets();
     });
 </script>
 

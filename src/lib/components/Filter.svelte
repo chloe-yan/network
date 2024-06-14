@@ -1,21 +1,15 @@
 <script>
     import { onDestroy } from 'svelte';
-    import { filteredStore, groupStore } from '../stores/networkStore';
+    import { filteredStore } from '../stores/networkStore';
     import { degreeBuckets } from './utils'
 
-    // let groups = [];
     let filteredBuckets = [];
-  
-    // const unsubscribeGroups = groupStore.subscribe(d => {
-    //   groups = d;
-    // });
   
     const unsubscribeFilteredBuckets = filteredStore.subscribe(d => {
       filteredBuckets = d;
     });
   
     onDestroy(() => {
-      // unsubscribeGroups();
       unsubscribeFilteredBuckets();
     });
   
@@ -24,9 +18,9 @@
       const bucketId = e.target.dataset.bucket;
 
       if (filteredBuckets.includes(bucketId)) {
-        filteredStore.set(filteredBuckets.filter(b => b != bucketId)); // Remove group
+        filteredStore.set(filteredBuckets.filter(b => b != bucketId));
       } else {
-        filteredStore.set([...filteredBuckets, bucketId]); // Add group
+        filteredStore.set([...filteredBuckets, bucketId]);
       }
     };
   </script>

@@ -16,6 +16,7 @@
 	},
 	"type": "module",
 	"dependencies": {
+		"counterpoint-vis": "^1.0.3",
 		"d3": "^7.9.0",
 		"d3-force-graph": "^0.4.3"
 	}
