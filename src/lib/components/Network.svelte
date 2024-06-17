@@ -3,9 +3,9 @@
 	import * as d3 from 'd3';
 	import { dataStore, filteredStore, groupStore } from '../stores/networkStore';
     import { degreeBuckets } from './utils';
-	import { Ticker, curveEaseInOut, MarkRenderGroup, Mark, Attribute, AttributeRecompute, PositionMap } from 'counterpoint-vis';
+	import { Ticker, curveEaseInOut, MarkRenderGroup, Mark, PositionMap } from 'counterpoint-vis';
 
-	let allNodes = [];
+	let nodes = []
 	let filteredNodes = [];
 	let colors = [];
 
@@ -94,7 +94,7 @@
 
 	onMount(async function () {
 		const data = await d3.json('https://vega.github.io/vega-datasets/data/miserables.json');
-		let nodes = data.nodes;
+		nodes = data.nodes;
 		let links = data.links;
 
 		// Compute degrees of each node
@@ -194,7 +194,7 @@
 		// Apply force simulation to network
 		simulation = d3
 			.forceSimulation(nodes)
-			.force('link', d3.forceLink(links).id(d => d.index).distance(RADIUS * 36).strength(2))
+			.force('link', d3.forceLink(links).id(d => d.index).distance(RADIUS * 20).strength(2))
 			.force('center', d3.forceCenter(width / 2, height / 2))
 			.force('x', d3.forceX(width / 2).strength(0.01))
 			.force('y', d3.forceY(height / 2).strength(0.01))
@@ -227,17 +227,26 @@
 	});
 
 	function handleMouseDown(e) {
+		// Reheat simulation on new drag event
+		if (!e.active) simulation.alphaTarget(0.3).restart();
 		initialMousePos = [
 			e.clientX - canvas.getBoundingClientRect().left,
 			e.clientY - canvas.getBoundingClientRect().top,
 		];
+
 		let nearest = positionMap.hitTest(initialMousePos);
 		if (!!nearest) {
 			// Freeze the mark's x and y attributes in case they are animating
 			// This allows us to click and drag even while the nodes are moving
 			draggingId = nearest.id;
 			let mark = markSet.get(draggingId);
-			mark.setAttr('x', mark.attr('x')).setAttr('y', mark.attr('y'));
+			mark
+				.setAttr('x', mark.attr('x'))
+				.setAttr('y', mark.attr('y'));
+			
+			let node = simulation.nodes().find(n => n.index === draggingId);
+			node.fx = e.x;
+			node.fy = e.y;
 		}
 	}
 
@@ -247,12 +256,19 @@
 			e.clientY - canvas.getBoundingClientRect().top,
 		];
 		if (initialMousePos != null) {
-			// Clicking and dragging - update the dragging mark's location
+			// Clicking and dragging - update the dragging mark's position
 			if (draggingId != null) {
+				// Update fixed position to cursor in the force simulation
+				// This allows d3 to figure out how the other nodes should move
+				let node = simulation.nodes().find(n => n.index === draggingId);
+				node.fx = mousePos[0];
+				node.fy = mousePos[1];
+
+				// Propagate updated position to its instance in the mark set
 				let mark = markSet.get(draggingId);
 				mark
-					.setAttr('x', mark.attr('x') + mousePos[0] - initialMousePos[0])
-					.setAttr('y', mark.attr('y') + mousePos[1] - initialMousePos[1]);
+					.setAttr('x', mousePos[0])
+					.setAttr('y', mousePos[1]);
 			}
 			initialMousePos = mousePos;
 		} else {
@@ -262,20 +278,25 @@
 	}
 
 	function handleMouseUp(e) {
+		if (!e.active) simulation.alphaTarget(0);
+		if (draggingId) {
+			// Unset dragged node's fixed position
+			let node = simulation.nodes().find(n => n.index === draggingId);
+			node.fx = null;
+			node.fy = null;
+		}
 		initialMousePos = null;
 		draggingId = null;
 	}
 
-	const unsubscribeData = dataStore.subscribe(d => allNodes = d.nodes);
 	const unsubscribeFilteredBuckets = filteredStore.subscribe(d => {
-		filteredNodes = allNodes.filter(node => d.find(bucket => bucket == node.degreeBucket));
+		filteredNodes = nodes.filter(node => d.find(bucket => bucket == node.degreeBucket));
 		if (markSet) markSet.update('filtered');
 	});
 
 	onDestroy(() => {
 		if (simulation) simulation.stop(); 
 		if (ticker) ticker.stop();
-		unsubscribeData();
 		unsubscribeFilteredBuckets();
 	});
 
