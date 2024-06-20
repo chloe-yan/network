@@ -1,7 +1,7 @@
 <script>
 	import { onMount, onDestroy } from 'svelte';
 	import * as d3 from 'd3';
-	import { dataStore, filteredStore, groupStore } from '../stores/networkStore';
+	import { dataStore, filteredGroupsStore, filteredThresholdStore, groupStore } from '../stores/networkStore';
     import { degreeBuckets } from './utils';
 	import { Ticker, curveEaseInOut, MarkRenderGroup, Mark, PositionMap } from 'counterpoint-vis';
 
@@ -18,6 +18,7 @@
 	let draggingId;
 	let initialMousePos;
 	let currentTick = 0;
+	let maxDegree = 0;
 
 	let width = 0;
 	let height = 0;
@@ -112,11 +113,19 @@
 			let degreeBucket = 0;
 			while (degreeBuckets[degreeBucket].max != null && degree > degreeBuckets[degreeBucket].max) {
 				degreeBucket++;
-			}			
+			}
+			if (degree > maxDegree) maxDegree = degree
 			return { index, name, group, degree, degreeBucket };
 		});
 
 		dataStore.set({ nodes, links });
+
+		// Set maximum and current filtered threshold to include nodes of any degree
+		const maxDegreeRounded = Math.ceil(maxDegree / 10) * 10;
+		filteredThresholdStore.set({
+			value: 0,
+			max: maxDegreeRounded
+		});
 
 		// Create color palette for node groups
 		const groupArr = [...new Set(d3.map(nodes, d => d.group).sort((a, b) => a - b))];
@@ -124,7 +133,7 @@
 		const groups = groupArr.map(group => { return { id: group, color: colors(group) } });
 		
 		groupStore.set(groups);
-		filteredStore.set(degreeBuckets.map(bucket => bucket.id));
+		filteredGroupsStore.set(degreeBuckets.map(bucket => bucket.id));
 
 		// Set canvas dimensions
 		width = canvas.offsetWidth;
@@ -196,18 +205,18 @@
 			.forceSimulation(nodes)
 			.force('link', d3.forceLink(links).id(d => d.index).distance(RADIUS * 20).strength(2))
 			.force('center', d3.forceCenter(width / 2, height / 2))
-			.force('x', d3.forceX(width / 2).strength(0.01))
-			.force('y', d3.forceY(height / 2).strength(0.01))
+			.force('x', d3.forceX(width / 2).strength(0.1))
+			.force('y', d3.forceY(height / 2).strength(0.1))
 			.force('collide', d3.forceCollide(RADIUS * 2))
-			.force('charge', d3.forceManyBody().strength(-30))
-			.alphaDecay(0.02)
+			.force('charge', d3.forceManyBody().strength(-50))
+			// .alphaDecay(0.036)
 			.on('tick', () => {
-				currentTick += 1;
-				if (!markSet.changed('x') || !markSet.changed('y')) {
+				if (currentTick == 0 || markSet.changed('x') || markSet.changed('y')) {
 					markSet
 						.animateTo('x', (_, i) => nodes[i].x)
 						.animateTo('y', (_, i) => nodes[i].y);
 				}
+				currentTick += 1;
 			});
 
 		draw();
@@ -289,8 +298,14 @@
 		draggingId = null;
 	}
 
-	const unsubscribeFilteredBuckets = filteredStore.subscribe(d => {
+	const unsubscribeFilteredBuckets = filteredGroupsStore.subscribe(d => {
 		filteredNodes = nodes.filter(node => d.find(bucket => bucket == node.degreeBucket));
+		if (markSet) markSet.update('filtered');
+	});
+
+	const unsubscribeFilteredThreshold = filteredThresholdStore.subscribe(d => {
+		const threshold = d.value;
+		filteredNodes = nodes.filter(node => node.degree >= threshold);
 		if (markSet) markSet.update('filtered');
 	});
 
@@ -298,6 +313,7 @@
 		if (simulation) simulation.stop(); 
 		if (ticker) ticker.stop();
 		unsubscribeFilteredBuckets();
+		unsubscribeFilteredThreshold();
 	});
 
 	// Display node label on hover

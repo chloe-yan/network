@@ -1,5 +1,6 @@
 <script>
-    import Filter from '../lib/components/Filter.svelte';
+    import FilterGroups from '../lib/components/FilterGroups.svelte';
+    import FilterSlider from '../lib/components/FilterSlider.svelte'
     import Network from '../lib/components/Network.svelte';
     import Table from '../lib/components/Table.svelte';
 
@@ -16,7 +17,8 @@
         <button class='toggle' on:click={handleToggle}></button>
         <div class={showDetails ? 'table-filter' : 'table-filter hide'}>
             <Table/>
-            <Filter/>
+            <!-- <FilterGroups/> -->
+            <FilterSlider/>
         </div>
     </div>
 </div>

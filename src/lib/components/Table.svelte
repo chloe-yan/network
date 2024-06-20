@@ -1,6 +1,6 @@
 <script>
   import { onDestroy } from 'svelte';
-    import { dataStore, filteredStore, groupStore } from '../stores/networkStore';
+    import { dataStore, filteredGroupsStore, filteredThresholdStore, groupStore } from '../stores/networkStore';
 
     let allNodes = [];
     let groups = [];
@@ -8,14 +8,18 @@
 
     const unsubscribeData = dataStore.subscribe(d => allNodes = d.nodes);
     const unsubscribeGroups = groupStore.subscribe(d => groups = d);
-	const unsubscribeFilteredBuckets = filteredStore.subscribe(d => {
-		filteredNodes = allNodes.filter(node => d.find(bucket => bucket == node.degreeBucket)).sort((a, b) => b.degree - a.degree);;
+	const unsubscribeFilteredBuckets = filteredGroupsStore.subscribe(d => {
+		filteredNodes = allNodes.filter(node => d.find(bucket => bucket == node.degreeBucket)).sort((a, b) => b.degree - a.degree);
 	});
+    const unsubscribeFilteredThreshold = filteredThresholdStore.subscribe(d => {
+        filteredNodes = allNodes.filter(node => node.degree >= d.value).sort((a, b) => b.degree - a.degree);
+    });
 
     onDestroy(() => {
         unsubscribeData();
         unsubscribeGroups();
         unsubscribeFilteredBuckets();
+        unsubscribeFilteredThreshold();
     });
 </script>
 
@@ -70,7 +74,7 @@
 
     #node-header {
         width: 100%;
-        min-width: 130px;
+        min-width: 160px;
     }
 
     #deg-header {
