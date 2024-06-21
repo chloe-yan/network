@@ -185,6 +185,7 @@
     width: 100%;
     border-radius: 8px;
     border: 2px solid #f4f4f4;
+    box-sizing: border-box;
     border-radius: 12px;
     box-shadow: 2px 2px 12px 4px #d1d1d14b;
   }
@@ -194,7 +195,6 @@
     width: 100%;
     position: relative;
     padding: 0.5rem;
-    box-sizing: border-box;
     outline: none;
   }
 
