@@ -1,12 +1,12 @@
 <script>
   import { onDestroy } from 'svelte';
     import { dataStore, filteredGroupsStore, filteredThresholdStore, groupStore } from '../stores/networkStore';
+    import { metrics } from './utils'
 
     let allNodes = [];
     let groups = [];
     let filteredNodes = [];
     let isDropdownOpen = false;
-    const metrics = ['Degree', 'Centrality', 'Other']
     let currentMetric = metrics[0]
 
     const handleDropdown = (e) => {
@@ -14,8 +14,12 @@
     }
 
     const handleSelectMetric = (e) => {
-        const metric = e.target.id;
-        console.log(metric)
+        currentMetric = e.target.id;
+        filteredThresholdStore.update(curr => ({
+            ...curr,
+            value: curr.mins[currentMetric], // Reset
+            metric: currentMetric
+        }))
     }
 
     const unsubscribeData = dataStore.subscribe(d => allNodes = d.nodes);
@@ -24,7 +28,19 @@
 		filteredNodes = allNodes.filter(node => d.find(bucket => bucket == node.degreeBucket)).sort((a, b) => b.degree - a.degree);
 	});
     const unsubscribeFilteredThreshold = filteredThresholdStore.subscribe(d => {
-        filteredNodes = allNodes.filter(node => node.degree >= d.value).sort((a, b) => b.degree - a.degree);
+        switch (d.metric) {
+            case 'Degree':
+                filteredNodes = allNodes.filter(node => node.degree >= d.value).sort((a, b) => b.degree - a.degree);
+                break;
+            case 'Closeness':
+                filteredNodes = allNodes.filter(node => node.closeness >= d.value).sort((a, b) => b.closeness - a.closeness);
+                break;
+            case 'Betweenness':
+                filteredNodes = allNodes.filter(node => node.betweenness >= d.value).sort((a, b) => b.betweenness - a.betweenness);
+                break;
+            default:
+                break;
+        }
     });
 
     onDestroy(() => {
@@ -33,6 +49,21 @@
         unsubscribeFilteredBuckets();
         unsubscribeFilteredThreshold();
     });
+
+    // Update node rankings when metric changes
+    $: switch (currentMetric) {
+        case 'Degree':
+            filteredNodes = filteredNodes.sort((a, b) => b.degree - a.degree)
+            break;
+        case 'Closeness':
+            filteredNodes = filteredNodes.sort((a, b) => b.closeness - a.closeness)
+        case 'Betweenness':
+            filteredNodes = filteredNodes.sort((a, b) => b.betweenness - a.betweenness)
+            break;
+        default:
+            break;
+    }
+
 </script>
 
 <table>
@@ -63,7 +94,17 @@
         {#each filteredNodes as node}
             <tr>
                 <td key={node.id} class='node-name' data-degree={node.degree} data-group={node.group} style={`--group-color: ${groups[node.group].color}`}>{node.name}</td>
-                <td class='node-metric'>{node.degree}</td>
+                <td class='node-metric'>
+                    {#if currentMetric === 'Degree'}
+                        {node.degree}
+                    {:else if currentMetric === 'Closeness'}
+                        {node.closeness}
+                    {:else if currentMetric === 'Betweenness'}
+                        {node.betweenness}
+                    {:else}
+                        <p>N/A</p>
+                    {/if}
+                </td>
             </tr>
         {/each}
     </tbody>
@@ -99,7 +140,6 @@
 
     th {
         padding: 6px 12px;
-        /* background: red; */
     }
 
     thead {
@@ -112,13 +152,12 @@
     }
 
     #deg-header {
-        width: 50px;
         border-radius: 8px;
         transition: 0.1s ease-out;
         display: flex;
         flex-direction: row;
         align-items: center;
-        padding-right: 24px;
+        padding-right: 8px;
     }
 
     #deg-header::after {
@@ -129,7 +168,7 @@
 
     #deg-header:hover {
         cursor: pointer;
-        background: rgb(244, 244, 244);
+        background:  rgb(234, 234, 234);
     }
 
     td, th {
@@ -153,15 +192,14 @@
         position: fixed;
         display: flex;
         flex-direction: column;
-        gap: 10px;
+        gap: 2px;
         background: white;
         margin-top: 14px;
         margin-left: -14px;
-        padding: 10px;
+        padding: 6px;
         border: 2px solid rgb(244, 244, 244);
         border-radius: 8px;
         box-shadow: 4px 2px 12px 4px hsla(0, 0%, 82%, 0.432);
-        width: 80px;
     }
 
     .metric {
@@ -174,16 +212,14 @@
         font-family: Inter;
         font-size: 14px;
         font-weight: 400;
-        display: flex;
-        flex-direction: row;
-        gap: 4px;
-        padding: 1px 2px;
+        padding: 6px 6px;
+        border-radius: 6px;
         cursor: pointer;
+        transition: 0.2s ease-out;
 }
 
-    .metric:hover::after {
-        content: '•';
-        color: gray;
+    .metric:hover {
+        background: rgb(234, 234, 234);
     }
 
 </style>

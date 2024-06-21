@@ -4,6 +4,7 @@
 	import { dataStore, filteredGroupsStore, filteredThresholdStore, groupStore } from '../stores/networkStore';
     import { degreeBuckets } from './utils';
 	import { Ticker, curveEaseInOut, MarkRenderGroup, Mark, PositionMap } from 'counterpoint-vis';
+    import { metrics } from './utils'
 
 	let nodes = []
 	let filteredNodes = [];
@@ -93,10 +94,33 @@
 		});
 	}
 
+	async function fetchData() {
+		const response = await fetch('https://vega.github.io/vega-datasets/data/miserables.json');
+		const data = await response.json();
+		return data;
+	}
+
 	onMount(async function () {
-		const data = await d3.json('https://vega.github.io/vega-datasets/data/miserables.json');
+		const data = await fetchData();
 		nodes = data.nodes;
 		let links = data.links;
+
+		// Get centrality metrics
+		const centralityRes = await fetch('/centrality', {
+			method: 'POST',
+			headers: {
+				'Content-Type': 'application/json'
+			},
+			body: JSON.stringify({ nodes, links })
+		});
+
+		let centralityMetrics = []
+
+		if (centralityRes.ok) {
+			centralityMetrics = await centralityRes.json();
+		} else {
+			console.error('Failed to fetch centrality metrics:', centralityRes.statusText);
+		}
 
 		// Compute degrees of each node
 		let degrees = {};
@@ -110,22 +134,52 @@
 		nodes = d3.map(nodes, node => {
 			const { index, name, group } = node;
 			const degree = degrees[index] ? degrees[index] : 0;
+
+			// Discretize degree into groups
 			let degreeBucket = 0;
 			while (degreeBuckets[degreeBucket].max != null && degree > degreeBuckets[degreeBucket].max) {
 				degreeBucket++;
 			}
+
 			if (degree > maxDegree) maxDegree = degree
-			return { index, name, group, degree, degreeBucket };
+			return {	
+				index,
+				name,
+				group,
+				degree,
+				degreeBucket,
+				betweenness: centralityMetrics[index].betweenness,
+				closeness: centralityMetrics[index].closeness
+			};
 		});
 
 		dataStore.set({ nodes, links });
 
+		// Find maximum values for betweenness and closeness
+
 		// Set maximum and current filtered threshold to include nodes of any degree
 		const maxDegreeRounded = Math.ceil(maxDegree / 10) * 10;
-		filteredThresholdStore.set({
+		const maxCloseness = Math.max(...Object.values(centralityMetrics).map(node => node.closeness))
+		const maxBetweenness = Math.max(...Object.values(centralityMetrics).map(node => node.betweenness))
+		filteredThresholdStore.update(curr => ({
+			...curr,
 			value: 0,
-			max: maxDegreeRounded
-		});
+			maxes: {
+				'Degree': maxDegreeRounded,
+				'Closeness': maxCloseness,
+				'Betweenness': maxBetweenness
+			},
+			mins: {
+				'Degree': 0,
+				'Closeness': 0,
+				'Betweenness': 0
+			},
+			precisions: {
+				'Degree': 0,
+				'Closeness': 2,
+				'Betweenness': 2
+			}
+		}));
 
 		// Create color palette for node groups
 		const groupArr = [...new Set(d3.map(nodes, d => d.group).sort((a, b) => a - b))];
@@ -305,7 +359,19 @@
 
 	const unsubscribeFilteredThreshold = filteredThresholdStore.subscribe(d => {
 		const threshold = d.value;
-		filteredNodes = nodes.filter(node => node.degree >= threshold);
+		switch (d.metric) {
+            case 'Degree':
+                filteredNodes = nodes.filter(node => node.degree >= threshold);
+                break;
+            case 'Closeness':
+                filteredNodes = nodes.filter(node => node.closeness >= threshold);
+                break;
+            case 'Betweenness':
+                filteredNodes = nodes.filter(node => node.betweenness >= threshold);
+                break;
+            default:
+                break;
+        }
 		if (markSet) markSet.update('filtered');
 	});
 

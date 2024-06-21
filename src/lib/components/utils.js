@@ -6,3 +6,6 @@ export const degreeBuckets = [
     { id: '3', min: 21, max: 30 },
     { id: '4', min: 30, max: null },
 ]
+
+// Various metrics for comparing nodes
+export const metrics = ['Degree', 'Closeness', 'Betweenness']

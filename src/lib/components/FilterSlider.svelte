@@ -2,10 +2,13 @@
   import { onDestroy } from 'svelte';
   import { filteredThresholdStore } from '../stores/networkStore';
   import { fly, fade } from "svelte/transition";
+  import { metrics } from './utils';
 
   let min = 0;
   let max = 0;
   let value = 0;
+  let metric = metrics[0];
+  let precision = 0;
   let id = null;
 
   let bar = null;
@@ -19,7 +22,10 @@
 
   const unsubscribeFilteredThreshold = filteredThresholdStore.subscribe(d => {
     value = d.value;
-    max = d.max;
+    metric = d.metric;
+    max = d.maxes[metric];
+    min = d.mins[metric];
+    precision = d.precisions[metric]
   });
 
   onDestroy(() => {
@@ -32,10 +38,10 @@
   }
 
   function setValue(value) {
-    filteredThresholdStore.set({
-      value: value,
-      max: max
-    })
+    filteredThresholdStore.update(curr => ({
+      ...curr,
+      value: value
+    }))
   }
 
   function onTrackEvent(e) {
@@ -73,13 +79,13 @@
 
   function getValue(clientX) {
     // Find distance between cursor and start of slider
-    let delta = clientX - (sliderX + 10);
+    let delta = clientX - (sliderX - 36);
 
     // Find progress percentage, subtract 5px offset from each end
     let percent = (delta * 100) / (bar.clientWidth - 10);
 
     // Clamp percentage to fit within the [min, max] range
-    setValue(parseInt((percent * (max - min)) / 100) + min);
+    setValue((parseFloat((percent * (max - min)) / 100) + min).toFixed(precision));
   }
 
   // Handle drags, clicks, and touches as update events

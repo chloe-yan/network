@@ -65,7 +65,7 @@
         display: flex;
         flex-direction: column;
         gap: 8px;
-        transition: 0.6s ease-out;
+        transition: 0.4s ease-out;
     }
 
     .hide {
