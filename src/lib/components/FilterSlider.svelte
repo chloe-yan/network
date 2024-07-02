@@ -2,7 +2,7 @@
   import { onDestroy } from 'svelte';
   import { filteredThresholdStore } from '../stores/networkStore';
   import { fly, fade } from "svelte/transition";
-  import { metrics } from './utils';
+  import { metrics, mix } from './utils';
 
   let min = 0;
   let max = 0;
@@ -15,6 +15,7 @@
   let position = null;
   let progress = null;
   let slider = null;
+  let wrapper = null;
 
   let sliderX = null;
   let isDragging = false;
@@ -109,6 +110,11 @@
     value = Math.max(min, Math.min(max, value));
     let percent = ((value - min) * 100) / (max - min);
     let offsetLeft = (bar.clientWidth - 10) * (percent / 100) + 5;
+
+    // Update current color
+    let currentColor = mix(percent / 100);
+    let rgb = `rgb(${currentColor[0]}, ${currentColor[1]}, ${currentColor[2]})`;
+    wrapper.style = `--current-color: ${rgb}`;
     
     // Update current position
     position.style.left = `${offsetLeft}px`;
@@ -124,7 +130,7 @@
   on:mouseup={onDragEnd}
   on:resize={resizeWindow}
 />
-<div class="slider-wrapper">
+<div class="slider-wrapper" bind:this={wrapper}>
   <p id="min">{min}</p>
   <div
     class="slider"
@@ -183,6 +189,7 @@
   }
 
   .slider-wrapper {
+    --current-color: rgb(52, 130, 232);
     display: flex;
     flex-direction: row;
     align-items: center;
@@ -214,8 +221,8 @@
     position: absolute;
     width: 0px;
     height: 6px;
-    background: #4696ff;
     border-radius: 6px;
+    background: linear-gradient(45deg, rgb(52, 130, 232), var(--current-color));
   }
 
   .position {
@@ -250,7 +257,7 @@
     font-weight: 500;
     text-align: center;
     color: white;
-    background: #3482e8;
+    background: var(--current-color);
     padding: 4px 8px;
     border-radius: 4px;
   }
@@ -264,7 +271,7 @@
     top: -3px;
     left: calc(50% - 3px);
     clip-path: polygon(0% 0%, 100% 100%, 0% 100%);
-    background-color: #6185ff;
+    background-color: var(--current-color);
     transform: rotate(135deg);
     border-radius: 0 0 0 2px;
   }

@@ -2,7 +2,9 @@
     import FilterGroups from '../lib/components/FilterGroups.svelte';
     import FilterSlider from '../lib/components/FilterSlider.svelte'
     import Network from '../lib/components/Network.svelte';
+    import NetworkScalability from '../lib/components/NetworkScalability.svelte';
     import Table from '../lib/components/Table.svelte';
+    import ColorByMetric from '../lib/components/ColorByMetric.svelte';
 
     // Side menu controls
     let showDetails = true;
@@ -13,12 +15,14 @@
 
 <div class="wrapper" >
     <Network/>
+    <!-- <NetworkScalability/> -->
     <div class='side-menu'>
         <button class='toggle' on:click={handleToggle}></button>
         <div class={showDetails ? 'table-filter' : 'table-filter hide'}>
             <Table/>
             <!-- <FilterGroups/> -->
             <FilterSlider/>
+            <ColorByMetric/>
         </div>
     </div>
 </div>

@@ -25,9 +25,10 @@ export async function POST({ request }) {
   const metrics = {};
 
   graph.nodes().forEach(node => {
-    metrics[node] = {
-      betweenness: betweennessCentrality[node].toFixed(numDecimalPlaces),
-      closeness: closenessCentrality[node].toFixed(numDecimalPlaces),
+    const index = parseInt(node)
+    metrics[index] = {
+      betweenness: betweennessCentrality[index].toFixed(numDecimalPlaces),
+      closeness: closenessCentrality[index].toFixed(numDecimalPlaces),
     };
   });
 

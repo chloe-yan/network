@@ -9,3 +9,13 @@ export const degreeBuckets = [
 
 // Various metrics for comparing nodes
 export const metrics = ['Degree', 'Closeness', 'Betweenness']
+
+// Picks color from gradient scale, used to color nodes based on metric
+export function mix(pct, color1 = [232, 52, 148], color2 = [52, 130, 232]) {
+    let rgb = [
+        Math.round(color1[0] * pct + color2[0] * (1 - pct)),
+        Math.round(color1[1] * pct + color2[1] * (1 - pct)),
+        Math.round(color1[2] * pct + color2[2] * (1 - pct))
+    ];
+    return rgb;
+}

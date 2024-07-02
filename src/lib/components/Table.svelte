@@ -1,13 +1,16 @@
 <script>
-  import { onDestroy } from 'svelte';
-    import { dataStore, filteredGroupsStore, filteredThresholdStore, groupStore } from '../stores/networkStore';
+    import { onDestroy } from 'svelte';
+    import { dataStore, filteredGroupsStore, filteredThresholdStore, groupStore, colorAssignmentsStore } from '../stores/networkStore';
     import { metrics } from './utils'
+    import { color } from 'd3';
 
     let allNodes = [];
     let groups = [];
     let filteredNodes = [];
     let isDropdownOpen = false;
     let currentMetric = metrics[0]
+    let getColor = (node) => {};
+    let shouldColorByMetric = false;
 
     const handleDropdown = (e) => {
         isDropdownOpen = !isDropdownOpen
@@ -19,7 +22,15 @@
             ...curr,
             value: curr.mins[currentMetric], // Reset
             metric: currentMetric
-        }))
+        }));
+
+        // If currently coloring by metric, continue coloring by new metric
+        if (shouldColorByMetric) {
+            colorAssignmentsStore.update(curr => ({
+                ...curr,
+                metric: currentMetric
+            }));
+        }
     }
 
     const unsubscribeData = dataStore.subscribe(d => allNodes = d.nodes);
@@ -42,12 +53,32 @@
                 break;
         }
     });
+    const unsubscribeColorStore = colorAssignmentsStore.subscribe(d => {
+        shouldColorByMetric = d.metric !== 'Group';
+        switch (d.metric) {
+            case 'Group':
+                getColor = d.groupColors;
+                break;
+            case 'Degree':
+                getColor = d.degreeColors;
+                break;
+            case 'Betweenness':
+                getColor = d.betweennessColors;
+                break;
+            case 'Closeness':
+                getColor = d.closenessColors;
+                break;
+            default:
+                break;
+        }
+    })
 
     onDestroy(() => {
         unsubscribeData();
         unsubscribeGroups();
         unsubscribeFilteredBuckets();
         unsubscribeFilteredThreshold();
+        unsubscribeColorStore();
     });
 
     // Update node rankings when metric changes
@@ -93,7 +124,7 @@
     <tbody>
         {#each filteredNodes as node}
             <tr>
-                <td key={node.id} class='node-name' data-degree={node.degree} data-group={node.group} style={`--group-color: ${groups[node.group].color}`}>{node.name}</td>
+                <td key={node.id} class='node-name' data-degree={node.degree} data-group={node.group} style={`--color: ${getColor(node)}`}>{node.name}</td>
                 <td class='node-metric'>
                     {#if currentMetric === 'Degree'}
                         {node.degree}
@@ -134,7 +165,7 @@
         height: 5px;
         top: -2px;
         right: 8px;
-        background-color: var(--group-color);
+        background-color: var(--color);
         border-radius: 50%;
     }
 

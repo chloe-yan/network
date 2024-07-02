@@ -1,14 +1,18 @@
 <script>
 	import { onMount, onDestroy } from 'svelte';
 	import * as d3 from 'd3';
-	import { dataStore, filteredGroupsStore, filteredThresholdStore, groupStore } from '../stores/networkStore';
-    import { degreeBuckets } from './utils';
+	import { colorAssignmentsStore, dataStore, filteredGroupsStore, filteredThresholdStore, groupStore } from '../stores/networkStore';
+    import { degreeBuckets, mix } from './utils';
 	import { Ticker, curveEaseInOut, MarkRenderGroup, Mark, PositionMap } from 'counterpoint-vis';
     import { metrics } from './utils'
 
 	let nodes = []
 	let filteredNodes = [];
-	let colors = [];
+	let groupColors = null;
+	let degreeColors = null;
+	let betweennessColors = null;
+	let closenessColors = null;
+	let colorMetric = 'Group';
 
 	let canvas;
 	let simulation;
@@ -183,8 +187,38 @@
 
 		// Create color palette for node groups
 		const groupArr = [...new Set(d3.map(nodes, d => d.group).sort((a, b) => a - b))];
-		colors = d3.scaleOrdinal(groupArr, d3.schemeTableau10);
-		const groups = groupArr.map(group => { return { id: group, color: colors(group) } });
+		const groupColorsByGroupId = d3.scaleOrdinal(groupArr, d3.schemeTableau10);
+		const groups = groupArr.map(group => { return { id: group, color: groupColorsByGroupId(group) } });
+		
+		groupColors = (node) => {
+			return groupColorsByGroupId(node.group)
+		}
+
+		degreeColors = (node) => {
+			let pct = node.degree / maxDegreeRounded;
+			let rgb = mix(pct);
+			return `rgb(${rgb[0]}, ${rgb[1]}, ${rgb[2]})`;
+		}
+
+		betweennessColors = (node) => {
+			let pct = node.betweenness / maxBetweenness;
+			let rgb = mix(pct);
+			return `rgb(${rgb[0]}, ${rgb[1]}, ${rgb[2]})`;
+		}
+
+		closenessColors = (node) => {
+			let pct = node.closeness / maxCloseness;
+			let rgb = mix(pct);
+			return `rgb(${rgb[0]}, ${rgb[1]}, ${rgb[2]})`;
+		}
+
+		colorAssignmentsStore.set({
+			metric: 'Group',
+			groupColors: groupColors,
+			degreeColors: degreeColors,
+			betweennessColors: betweennessColors,
+			closenessColors: closenessColors,
+		})
 		
 		groupStore.set(groups);
 		filteredGroupsStore.set(degreeBuckets.map(bucket => bucket.id));
@@ -197,7 +231,24 @@
 
 		// Gray out unfiltered nodes
 		function getColor(mark, n) {
-			return mark.attr('filtered') ? colors(n.group) : '#e8e8e8';
+			let color;
+			switch (colorMetric) {
+				case 'Group':
+					color = groupColors(n);
+					break;
+				case 'Degree':
+					color = degreeColors(n);
+					break;
+				case 'Betweenness':
+					color = betweennessColors(n);
+					break;
+				case 'Closeness':
+					color = closenessColors(n);
+					break;
+				default:
+					break;
+			}
+			return mark.attr('filtered') ? color : '#e8e8e8';
 		}
 
 		// Use stronger edge strokes to link filtered nodes
@@ -375,11 +426,16 @@
 		if (markSet) markSet.update('filtered');
 	});
 
+	const unsubscribeColorStore = colorAssignmentsStore.subscribe(d => {
+		colorMetric = d.metric;
+	})
+
 	onDestroy(() => {
 		if (simulation) simulation.stop(); 
 		if (ticker) ticker.stop();
 		unsubscribeFilteredBuckets();
 		unsubscribeFilteredThreshold();
+		unsubscribeColorStore();
 	});
 
 	// Display node label on hover

@@ -3,8 +3,10 @@ import { metrics } from '../components/utils';
 
 // All nodes and connections from dataset
 export const dataStore = writable({ nodes: [], links: [] });
+
 // Filtered groups of nodes to visualize, categorized by degrees
 export const filteredGroupsStore = writable([]);
+
 // Filtered range of nodes to visualize, based individually on degrees
 export const filteredThresholdStore = writable({
     value: 0,
@@ -13,5 +15,15 @@ export const filteredThresholdStore = writable({
     metric: metrics[0],
     precisions: {}
 });
+
 // List of all groups
 export const groupStore = writable([]);
+
+// Color assignments for nodes
+export const colorAssignmentsStore = writable({
+    metric: 'Group',
+    groupColors: (groupId) => {},
+    degreeColors: (id) => {},
+    betweennessColors: (id) => {},
+    closenessColors: (id) => {},
+});
