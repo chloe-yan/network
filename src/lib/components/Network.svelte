@@ -428,6 +428,10 @@
 
 	const unsubscribeColorStore = colorAssignmentsStore.subscribe(d => {
 		colorMetric = d.metric;
+		if (simulation) {
+			simulation.force('center', d3.forceCenter(width / 2, height / 2));
+			simulation.alpha(0.5).restart();
+		}
 	})
 
 	onDestroy(() => {
@@ -440,6 +444,8 @@
 
 	// Display node label on hover
 	$: hoveredId, markSet && markSet.animate('labelSize');
+	// Update node colors on metric change
+	$: colorMetric, markSet && markSet.animate('color');
 </script>
 
 <canvas
