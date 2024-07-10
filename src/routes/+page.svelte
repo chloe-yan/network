@@ -7,8 +7,12 @@
     import ColorByMetric from '../lib/components/ColorByMetric.svelte';
 
     // Show filtered nodes only
-    let checkbox = null;
+    let filterCheckbox = null;
     let showFilteredOnly = false;
+
+    // Show node labels
+    let labelCheckbox = null;
+    let showNodeLabels = false;
 
     // Side menu controls
     let showDetails = true;
@@ -18,7 +22,7 @@
 </script>
 
 <div class="wrapper" >
-    <Network showFilteredOnly={showFilteredOnly} />
+    <Network showFilteredOnly={showFilteredOnly} showNodeLabels={showNodeLabels} />
     <!-- <NetworkScalability/> -->
     <div class='side-menu'>
         <button class='toggle' on:click={handleToggle}></button>
@@ -28,8 +32,12 @@
             <FilterSlider/>
             <ColorByMetric/>
             <div class='container'>
-                <input on:click={() => {showFilteredOnly = checkbox.checked}} bind:this={checkbox} id='show-filtered-only' type='checkbox'/>
+                <input on:click={() => {showFilteredOnly = filterCheckbox.checked}} bind:this={filterCheckbox} id='show-filtered-only' type='checkbox'/>
                 <label for='show-filtered-only'>Show filtered nodes only</label>
+            </div>
+            <div class='container'>
+                <input on:click={() => {showNodeLabels = labelCheckbox.checked}} bind:this={labelCheckbox} id='show-node-labels' type='checkbox'/>
+                <label for='show-node-labels'>Show node labels</label>
             </div>
         </div>
     </div>

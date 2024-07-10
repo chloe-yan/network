@@ -4,7 +4,6 @@
 	import { colorAssignmentsStore, dataStore, filteredGroupsStore, filteredThresholdStore, groupStore } from '../stores/networkStore';
     import { degreeBuckets, mix } from './utils';
 	import { Ticker, curveEaseInOut, MarkRenderGroup, Mark, PositionMap } from 'counterpoint-vis';
-    import { metrics } from './utils'
 
 	let nodes = []
 	let filteredNodes = [];
@@ -14,6 +13,7 @@
 	let closenessColors = null;
 	let colorMetric = 'Group';
 	export let showFilteredOnly = false;
+	export let showNodeLabels = false;
 
 	let canvas;
 	let simulation;
@@ -31,7 +31,6 @@
 	const RADIUS = 6;
 
 	function draw() {
-		console.log(showFilteredOnly)
 		if (!canvas) return;
 		let ctx = canvas.getContext('2d');
 		if (!ctx) return;
@@ -90,7 +89,18 @@
 				ctx.restore();
 
 				// Display node label on hover
-				if (labelSize > 1) {
+				if (showNodeLabels) {
+					let smallerLabelSize = 8;
+					ctx.save();
+					ctx.font = `${smallerLabelSize}pt sans-serif`;
+					ctx.strokeStyle = 'white';
+					ctx.lineWidth = Math.round(0.25 * smallerLabelSize);
+					ctx.fillStyle = 'black';
+					ctx.textAlign = 'center';
+					ctx.strokeText(name, x, y - radius - 4);
+					ctx.fillText(name, x, y - radius - 4);
+					ctx.restore();
+				} else if (labelSize > 1) {
 					ctx.save();
 					ctx.font = `${labelSize.toFixed(2)}pt sans-serif`;
 					ctx.strokeStyle = 'white';
