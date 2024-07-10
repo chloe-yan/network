@@ -13,6 +13,7 @@
 	let betweennessColors = null;
 	let closenessColors = null;
 	let colorMetric = 'Group';
+	export let showFilteredOnly = false;
 
 	let canvas;
 	let simulation;
@@ -30,6 +31,7 @@
 	const RADIUS = 6;
 
 	function draw() {
+		console.log(showFilteredOnly)
 		if (!canvas) return;
 		let ctx = canvas.getContext('2d');
 		if (!ctx) return;
@@ -48,52 +50,57 @@
 			let filtered = mark.attr('filtered');
 			let strokeStyle = mark.attr('strokeStyle');
 
-			ctx.beginPath();
-			mark.adj('neighbors').forEach((neighbor) => {
-				let nx = neighbor.attr('x');
-				let ny = neighbor.attr('y');
-				let nborFiltered = neighbor.attr('filtered');
-				let nborStrokeStyle = neighbor.attr('strokeStyle');
+			if ((!showFilteredOnly) || filtered) {
+				ctx.beginPath();
+				mark.adj('neighbors').forEach((neighbor) => {
+					let nx = neighbor.attr('x');
+					let ny = neighbor.attr('y');
+					let nborFiltered = neighbor.attr('filtered');
 
-				if (filtered && nborFiltered) {
-					ctx.strokeStyle = strokeStyle;
-				} else {
-					ctx.strokeStyle = filtered ? nborStrokeStyle : strokeStyle;
-				}
-
-				ctx.moveTo(x, y);
-				ctx.lineTo(nx, ny);
-				ctx.globalAlpha = 0.3;
-			});
-			ctx.stroke();
-			ctx.closePath();
+					if ((!showFilteredOnly) || nborFiltered) {
+						let nborStrokeStyle = neighbor.attr('strokeStyle');
+						if (filtered && nborFiltered) {
+							ctx.strokeStyle = strokeStyle;
+						} else {
+							ctx.strokeStyle = filtered ? nborStrokeStyle : strokeStyle;
+						}
+						ctx.moveTo(x, y);
+						ctx.lineTo(nx, ny);
+						ctx.globalAlpha = 0.3;
+					}
+				});
+				ctx.stroke();
+				ctx.closePath();
+			}
 		});
 		ctx.globalAlpha = 1.0;
 
 		// Draw nodes
 		markSet.stage.forEach((mark) => {
-			ctx.save();
-			let { x, y, name, radius, color, strokeStyle, labelSize } = mark.get();
-			ctx.fillStyle = color;
-			ctx.beginPath();
-			ctx.ellipse(x, y, radius, radius, 0, 0, 2 * Math.PI, false);
-			ctx.fill();
-			ctx.strokeStyle = strokeStyle;
-			ctx.stroke();
-			ctx.closePath();
-			ctx.restore();
-
-			// Display node label on hover
-			if (labelSize > 1) {
+			if (!showFilteredOnly || mark.attr('filtered')) {
 				ctx.save();
-				ctx.font = `${labelSize.toFixed(2)}pt sans-serif`;
-				ctx.strokeStyle = 'white';
-				ctx.lineWidth = Math.round(0.25 * labelSize);
-				ctx.fillStyle = 'black';
-				ctx.textAlign = 'center';
-				ctx.strokeText(name, x, y - radius - 4);
-				ctx.fillText(name, x, y - radius - 4);
+				let { x, y, name, radius, color, strokeStyle, labelSize } = mark.get();
+				ctx.fillStyle = color;
+				ctx.beginPath();
+				ctx.ellipse(x, y, radius, radius, 0, 0, 2 * Math.PI, false);
+				ctx.fill();
+				ctx.strokeStyle = strokeStyle;
+				ctx.stroke();
+				ctx.closePath();
 				ctx.restore();
+
+				// Display node label on hover
+				if (labelSize > 1) {
+					ctx.save();
+					ctx.font = `${labelSize.toFixed(2)}pt sans-serif`;
+					ctx.strokeStyle = 'white';
+					ctx.lineWidth = Math.round(0.25 * labelSize);
+					ctx.fillStyle = 'black';
+					ctx.textAlign = 'center';
+					ctx.strokeText(name, x, y - radius - 4);
+					ctx.fillText(name, x, y - radius - 4);
+					ctx.restore();
+				}
 			}
 		});
 	}

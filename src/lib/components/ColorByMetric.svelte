@@ -23,8 +23,8 @@
 </script>
 
 <div class='container'>
-    <input on:click={handleClick} bind:this={checkbox} id='checkbox' type='checkbox'/>
-    <label for='checkbox'>Color nodes by {metric.toLowerCase()}</label>
+    <input on:click={handleClick} bind:this={checkbox} id='color-by-degree' type='checkbox'/>
+    <label for='color-by-degree'>Color nodes by {metric.toLowerCase()}</label>
 </div>
 
 <style>

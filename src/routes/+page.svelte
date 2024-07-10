@@ -6,6 +6,10 @@
     import Table from '../lib/components/Table.svelte';
     import ColorByMetric from '../lib/components/ColorByMetric.svelte';
 
+    // Show filtered nodes only
+    let checkbox = null;
+    let showFilteredOnly = false;
+
     // Side menu controls
     let showDetails = true;
     const handleToggle = () => {
@@ -14,7 +18,7 @@
 </script>
 
 <div class="wrapper" >
-    <Network/>
+    <Network showFilteredOnly={showFilteredOnly} />
     <!-- <NetworkScalability/> -->
     <div class='side-menu'>
         <button class='toggle' on:click={handleToggle}></button>
@@ -23,6 +27,10 @@
             <!-- <FilterGroups/> -->
             <FilterSlider/>
             <ColorByMetric/>
+            <div class='container'>
+                <input on:click={() => {showFilteredOnly = checkbox.checked}} bind:this={checkbox} id='show-filtered-only' type='checkbox'/>
+                <label for='show-filtered-only'>Show filtered nodes only</label>
+            </div>
         </div>
     </div>
 </div>
@@ -74,5 +82,35 @@
 
     .hide {
         transform: translateX(calc(-100% - 12px));
+    }
+    .container {
+        display: flex;
+        flex-direction: row;
+        align-items: center;
+        gap: 10px;
+        width: 100%;
+        border-radius: 8px;
+        box-sizing: border-box;
+        border-radius: 12px;
+        height: 36px;
+        margin-top: -12px;
+    }
+
+    input {
+        margin-left: 16px;
+    }
+
+    label {
+        display: flex;
+        align-items: center;
+        width: 100%;
+        height: 100%;
+        padding-right: 16px;
+        font-family: Inter;
+        font-size: 13px;
+    }
+
+    input:hover, label:hover {
+        cursor: pointer;
     }
 </style>
