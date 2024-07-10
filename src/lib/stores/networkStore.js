@@ -1,8 +1,8 @@
 import { writable } from 'svelte/store'
-import { metrics } from '../components/utils';
+import { metrics, variants } from '../components/utils';
 
 // All nodes and connections from dataset
-export const dataStore = writable({ nodes: [], links: [] });
+export const dataStore = writable({ nodes: [], links: [], coOccurrences: [] });
 
 // Filtered groups of nodes to visualize, categorized by degrees
 export const filteredGroupsStore = writable([]);
@@ -12,7 +12,8 @@ export const filteredThresholdStore = writable({
     value: 0,
     mins: {},
     maxes: {},
-    metric: metrics[0],
+    variant: variants[0],
+    metric: metrics[variants[0]][0],
     precisions: {}
 });
 
@@ -26,4 +27,5 @@ export const colorAssignmentsStore = writable({
     degreeColors: (id) => {},
     betweennessColors: (id) => {},
     closenessColors: (id) => {},
+    coOccurrenceColors: (id) => {},
 });

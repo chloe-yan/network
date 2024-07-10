@@ -7,8 +7,15 @@ export const degreeBuckets = [
     { id: '4', min: 30, max: null },
 ]
 
-// Various metrics for comparing nodes
-export const metrics = ['Degree', 'Closeness', 'Betweenness']
+// Variants to be associated with metrics
+export const variants = ['Node', 'Edge']
+
+// Metrics for comparing nodes
+export const metrics = {
+    'Node': ['Degree', 'Closeness', 'Betweenness'],
+    'Edge': ['Co-occurrence']
+}
+
 
 // Picks color from gradient scale, used to color nodes based on metric
 export function mix(pct, color1 = [232, 52, 148], color2 = [52, 130, 232]) {

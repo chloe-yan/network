@@ -101,7 +101,7 @@
         box-sizing: border-box;
         border-radius: 12px;
         height: 36px;
-        margin-top: -12px;
+        margin-bottom: -12px;
     }
 
     input {

@@ -2,16 +2,20 @@
 	import { onMount, onDestroy } from 'svelte';
 	import * as d3 from 'd3';
 	import { colorAssignmentsStore, dataStore, filteredGroupsStore, filteredThresholdStore, groupStore } from '../stores/networkStore';
-    import { degreeBuckets, mix } from './utils';
+    import { degreeBuckets, mix, variants } from './utils';
 	import { Ticker, curveEaseInOut, MarkRenderGroup, Mark, PositionMap } from 'counterpoint-vis';
 
 	let nodes = []
 	let filteredNodes = [];
+	let links = [];
+	let filteredLinks = [];
 	let groupColors = null;
 	let degreeColors = null;
 	let betweennessColors = null;
 	let closenessColors = null;
+	let coOccurrenceColors = null;
 	let colorMetric = 'Group';
+	let variant = variants[0];
 	export let showFilteredOnly = false;
 	export let showNodeLabels = false;
 
@@ -124,7 +128,7 @@
 	onMount(async function () {
 		const data = await fetchData();
 		nodes = data.nodes;
-		let links = data.links;
+		links = data.links;
 
 		// Get centrality metrics
 		const centralityRes = await fetch('/centrality', {
@@ -145,10 +149,19 @@
 
 		// Compute degrees of each node
 		let degrees = {};
+		// Store adjacency list of co-occurrence
+		let coOccurrences = {};
+		let maxCoOccurrence = 0;
 		links.forEach(link => {
 			const { source, target } = link;
 			degrees[target] = (degrees[target] ? degrees[target] : 0) + 1;
 			degrees[source] = (degrees[source] ? degrees[source] : 0) + 1;
+			if (!coOccurrences[source]) coOccurrences[source] = {};
+			if (!coOccurrences[target]) coOccurrences[target] = {};
+			coOccurrences[source][target] = (coOccurrences[source][target] ? coOccurrences[source]
+			[target] : 0) + link.value;
+			coOccurrences[target][source] = (coOccurrences[target][source] ? coOccurrences[target][source] : 0) + link.value; 
+			maxCoOccurrence = Math.max(maxCoOccurrence, link.value);
 		});
 
 		// Augment nodes with degree info, bucketize based on number of degrees
@@ -170,11 +183,11 @@
 				degree,
 				degreeBucket,
 				betweenness: centralityMetrics[index].betweenness,
-				closeness: centralityMetrics[index].closeness
+				closeness: centralityMetrics[index].closeness,
 			};
 		});
 
-		dataStore.set({ nodes, links });
+		dataStore.set({ nodes, links, coOccurrences });
 
 		// Find maximum values for betweenness and closeness
 
@@ -188,17 +201,20 @@
 			maxes: {
 				'Degree': maxDegreeRounded,
 				'Closeness': maxCloseness,
-				'Betweenness': maxBetweenness
+				'Betweenness': maxBetweenness,
+				'Co-occurrence': maxCoOccurrence,
 			},
 			mins: {
 				'Degree': 0,
 				'Closeness': 0,
-				'Betweenness': 0
+				'Betweenness': 0,
+				'Co-occurrence': 0,
 			},
 			precisions: {
 				'Degree': 0,
 				'Closeness': 2,
-				'Betweenness': 2
+				'Betweenness': 2,
+				'Co-occurrence': 0,
 			}
 		}));
 
@@ -229,12 +245,19 @@
 			return `rgb(${rgb[0]}, ${rgb[1]}, ${rgb[2]})`;
 		}
 
+		coOccurrenceColors = (link) => {
+			let pct = link.value / maxCoOccurrence;
+			let rgb = mix(pct);
+			return `rgb(${rgb[0]}, ${rgb[1]}, ${rgb[2]})`;
+		}
+
 		colorAssignmentsStore.set({
 			metric: 'Group',
 			groupColors: groupColors,
 			degreeColors: degreeColors,
 			betweennessColors: betweennessColors,
 			closenessColors: closenessColors,
+			coOccurrenceColors: coOccurrenceColors
 		})
 		
 		groupStore.set(groups);
@@ -262,6 +285,9 @@
 				case 'Closeness':
 					color = closenessColors(n);
 					break;
+				case 'Co-occurrence':
+					color = groupColors(n); // Color nodes by default
+					break;
 				default:
 					break;
 			}
@@ -270,7 +296,7 @@
 
 		// Use stronger edge strokes to link filtered nodes
 		function getStroke(mark) {
-			return mark.attr('filtered') ? '#bbb' : '#f0f0f0';
+			return mark.attr('filtered') ? '#bbb' : 'rgba(0, 0, 0, 0)';
 		}
 
 		// Combine nodes inside a mark render group
@@ -437,6 +463,12 @@
             case 'Betweenness':
                 filteredNodes = nodes.filter(node => node.betweenness >= threshold);
                 break;
+			case 'Co-occurrence':
+				filteredLinks = links.filter(link => link.value >= threshold);
+				const sources = filteredLinks.map(link => link.source);
+				const targets = filteredLinks.map(link => link.target);
+				filteredNodes = sources.concat(targets);
+				break;
             default:
                 break;
         }
@@ -460,7 +492,7 @@
 	});
 
 	// Display node label on hover
-	$: hoveredId, markSet && markSet.animate('labelSize');
+	$: hoveredId, showNodeLabels, markSet && markSet.animate('labelSize');
 	// Update node colors on metric change
 	$: colorMetric, markSet && markSet.animate('color');
 </script>

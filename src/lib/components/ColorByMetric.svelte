@@ -1,10 +1,11 @@
 <script>
     import { onDestroy } from 'svelte';
     import { filteredThresholdStore, colorAssignmentsStore } from '../stores/networkStore';
-    import { metrics } from './utils'
+    import { metrics, variants } from './utils'
 
     let checkbox = null;
-    let metric = metrics[0];
+    let variant = variants[0]
+    let metric = metrics[variant][0];
 
     const handleClick = () => {
         colorAssignmentsStore.update(curr => ({
@@ -14,6 +15,7 @@
     }
 
     const unsubscribeFilteredThreshold = filteredThresholdStore.subscribe(d => {
+        variant = d.variant
         metric = d.metric;
     });
 
@@ -22,10 +24,12 @@
     });
 </script>
 
-<div class='container'>
-    <input on:click={handleClick} bind:this={checkbox} id='color-by-degree' type='checkbox'/>
-    <label for='color-by-degree'>Color nodes by {metric.toLowerCase()}</label>
-</div>
+{#if variant === 'Node'}
+    <div class='container'>
+        <input on:click={handleClick} bind:this={checkbox} id='color-by-degree' type='checkbox'/>
+        <label for='color-by-degree'>Color nodes by {metric.toLowerCase()}</label>
+    </div>
+{/if}
 
 <style>
     .container {
@@ -38,6 +42,7 @@
         box-sizing: border-box;
         border-radius: 12px;
         height: 36px;
+        margin-bottom: -12px;
     }
 
     input {
