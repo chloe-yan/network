@@ -27,7 +27,8 @@
         currentMetric = e.target.id;
         filteredThresholdStore.update(curr => ({
             ...curr,
-            value: curr.mins[currentMetric], // Reset
+            startValue: curr.mins[currentMetric], // Reset
+            endValue: curr.maxes[currentMetric],
             metric: currentMetric,
         }));
 
@@ -45,7 +46,8 @@
         currentMetric = metrics[currentVariant][0]
         filteredThresholdStore.update(curr => ({
             ...curr,
-            value: curr.mins[currentMetric], // Reset
+            startValue: curr.mins[currentMetric], // Reset
+            endValue: curr.maxes[currentMetric],
             variant: currentVariant,
             metric: currentMetric,
         }));
@@ -70,16 +72,16 @@
     const unsubscribeFilteredThreshold = filteredThresholdStore.subscribe(d => {
         switch (d.metric) {
             case 'Degree':
-                filteredNodes = allNodes.filter(node => node.degree >= d.value).sort((a, b) => b.degree - a.degree);
+                filteredNodes = allNodes.filter(node => (d.startValue <= node.degree && node.degree <= d.endValue)).sort((a, b) => b.degree - a.degree);
                 break;
             case 'Closeness':
-                filteredNodes = allNodes.filter(node => node.closeness >= d.value).sort((a, b) => b.closeness - a.closeness);
+                filteredNodes = allNodes.filter(node => (d.startValue <= node.closeness && node.closeness <= d.endValue)).sort((a, b) => b.closeness - a.closeness);
                 break;
             case 'Betweenness':
-                filteredNodes = allNodes.filter(node => node.betweenness >= d.value).sort((a, b) => b.betweenness - a.betweenness);
+                filteredNodes = allNodes.filter(node => (d.startValue <= node.betweenness && node.betweenness <= d.endValue)).sort((a, b) => b.betweenness - a.betweenness);
                 break;
             case 'Co-occurrence':
-                filteredLinks = allLinks.filter(link => link.value >= d.value).sort((a, b) => b.value - a.value);
+                filteredLinks = allLinks.filter(link => (d.startValue <= link.value && link.value <= d.endValue)).sort((a, b) => b.value - a.value);
                 break;
             default:
                 break;

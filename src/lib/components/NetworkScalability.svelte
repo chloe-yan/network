@@ -191,7 +191,8 @@
         const maxBetweenness = Math.max(...Object.values(centralityMetrics).map(node => node.betweenness))
         filteredThresholdStore.update(curr => ({
             ...curr,
-            value: 0,
+            startValue: 0,
+            endValue: maxDegreeRounded,
             maxes: {
                 'Degree': maxDegreeRounded,
                 'Closeness': maxCloseness,

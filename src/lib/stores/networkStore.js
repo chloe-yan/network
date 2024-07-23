@@ -9,7 +9,8 @@ export const filteredGroupsStore = writable([]);
 
 // Filtered range of nodes to visualize, based individually on degrees
 export const filteredThresholdStore = writable({
-    value: 0,
+    startValue: 0,
+    endValue: 0,
     mins: {},
     maxes: {},
     variant: variants[0],

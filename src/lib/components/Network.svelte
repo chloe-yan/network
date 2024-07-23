@@ -197,7 +197,8 @@
 		const maxBetweenness = Math.max(...Object.values(centralityMetrics).map(node => node.betweenness))
 		filteredThresholdStore.update(curr => ({
 			...curr,
-			value: 0,
+			startValue: 0,
+			endValue: maxDegreeRounded,
 			maxes: {
 				'Degree': maxDegreeRounded,
 				'Closeness': maxCloseness,
@@ -452,19 +453,20 @@
 	});
 
 	const unsubscribeFilteredThreshold = filteredThresholdStore.subscribe(d => {
-		const threshold = d.value;
+		const startValue = d.startValue;
+		const endValue = d.endValue;
 		switch (d.metric) {
             case 'Degree':
-                filteredNodes = nodes.filter(node => node.degree >= threshold);
+                filteredNodes = nodes.filter(node => (startValue <= node.degree && node.degree <= endValue));
                 break;
             case 'Closeness':
-                filteredNodes = nodes.filter(node => node.closeness >= threshold);
+                filteredNodes = nodes.filter(node => (startValue <= node.closeness && node.closeness <= endValue));
                 break;
             case 'Betweenness':
-                filteredNodes = nodes.filter(node => node.betweenness >= threshold);
+                filteredNodes = nodes.filter(node => (startValue <= node.betweenness && node.betweenness <= endValue));
                 break;
 			case 'Co-occurrence':
-				filteredLinks = links.filter(link => link.value >= threshold);
+				filteredLinks = links.filter(link => (startValue <= link.value && link.value <= endValue));
 				const sources = filteredLinks.map(link => link.source);
 				const targets = filteredLinks.map(link => link.target);
 				filteredNodes = sources.concat(targets);

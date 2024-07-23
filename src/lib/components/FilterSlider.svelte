@@ -6,23 +6,28 @@
 
   let min = 0;
   let max = 0;
-  let value = 0;
+  let startValue = 0;
+  let endValue = 0;
+  let startPct = 0;
+  let endPct = 1;
+
   let metric = metrics[0];
   let precision = 0;
-  let id = null;
 
-  let bar = null;
-  let position = null;
-  let progress = null;
-  let slider = null;
   let wrapper = null;
+  let container = null;
+  let startHandle;
+	let selectedRange;
+	let slider;
 
-  let sliderX = null;
-  let isDragging = false;
-  let isHovering = false;
+  let isDraggingStart = false;
+  let isDraggingEnd = false;
+  let isHoveringStart = false;
+  let isHoveringEnd = false;
 
   const unsubscribeFilteredThreshold = filteredThresholdStore.subscribe(d => {
-    value = d.value;
+    startValue = d.startValue;
+    endValue = d.endValue;
     metric = d.metric;
     max = d.maxes[metric];
     min = d.mins[metric];
@@ -33,139 +38,140 @@
     unsubscribeFilteredThreshold();
   })
 
-  function resizeWindow() {
-    // Adjust position to account for new viewport size
-    sliderX = slider.getBoundingClientRect().left;
-  }
-
-  function setValue(value) {
+  function setRange(start, end) {
     filteredThresholdStore.update(curr => ({
       ...curr,
-      value: value
+      startValue: start,
+      endValue: end,
     }))
   }
 
-  function onTrackEvent(e) {
-    // Update value immediately before beginning drag
-    updateValueOnEvent(e);
-    isDragging = !!position;
-  }
+	function handleMousedown(event, handleType) {
+		event.preventDefault();
+		let x = event.clientX || event.touches[0].clientX;
+		const onMouseMove = (moveEvent) => {
+			const clientX = moveEvent.clientX || moveEvent.touches[0].clientX;
+			const dx = clientX - x;
+			x = clientX;
+			const { left, right } = slider.getBoundingClientRect();
+			const parentWidth = right - left;
+			const p = Math.min(Math.max((clientX - left) / parentWidth, 0), 1);
+			if (handleType === 'start') {
+				startValue = p * max;
+        startPct = p;
 
-  function onDragEnd(e) {
-    // If using mouse - remove pointer event shield
-    if (e.type === "mouseup" && isMouseInElement(e, position)) {
-      isHovering = true;
-    }
-    isDragging = false;
-  }
+        let color = mix((x / parentWidth));
+        let rgb = `rgb(${color[0]}, ${color[1]}, ${color[2]})`;
+        wrapper.style = `--start-color: ${rgb}`;
+			} else if (handleType === 'end') {
+				endValue = p * max;
+        endPct = p;
 
-  // Check if mouse event cords overlay with an slider's area
-  function isMouseInElement(e, slider) {
-    let rect = slider.getBoundingClientRect();
-    let { clientX: x, clientY: y } = e;
-    if (x < rect.left || x >= rect.right) return false;
-    if (y < rect.top || y >= rect.bottom) return false;
-    return true;
-  }
+        let color = mix((x / parentWidth));
+        let rgb = `rgb(${color[0]}, ${color[1]}, ${color[2]})`;
+        container.style = `--end-color: ${rgb}`;
+			} else if (handleType === 'selectedRange') {
+				const { width } = selectedRange.getBoundingClientRect();
+				const startHandleLeft = startHandle.getBoundingClientRect().left;
+				const pxStart = Math.max(Math.min(0, (startHandleLeft + dx) - left), parentWidth - width);
+				const pxEnd = Math.max(Math.min(width, (pxStart + width) - left), parentWidth);
+				const pStart = pxStart / parentWidth;
+				const pEnd = pxEnd / parentWidth;
+				startPct = pStart;
+				endPct = pEnd;
+			}
+		};
 
-  // Accessible keypress handling
-  function onKeyPress(e) {
-    if ((e.key === "ArrowUp" || e.key === "ArrowRight") && value > max) {
-      setValue(max);
-    }
-    if ((e.key === "ArrowDown" || e.key === "ArrowLeft") && value < min) {
-      setValue(min);
-    }
-  }
+		const onMouseUp = () => {
+      isDraggingStart = false;
+      isDraggingEnd = false;
+			window.removeEventListener('mousemove', onMouseMove);
+			window.removeEventListener('mouseup', onMouseUp);
+			window.removeEventListener('touchmove', onMouseMove);
+			window.removeEventListener('touchend', onMouseUp);
+		};
 
-  function getValue(clientX) {
-    // Find distance between cursor and start of slider
-    let delta = clientX - (sliderX - 36);
+		window.addEventListener('mousemove', onMouseMove);
+		window.addEventListener('mouseup', onMouseUp);
+		window.addEventListener('touchmove', onMouseMove);
+		window.addEventListener('touchend', onMouseUp);
+	}
 
-    // Find progress percentage, subtract 5px offset from each end
-    let percent = (delta * 100) / (bar.clientWidth - 10);
+	function handleStartMouseDown(event) {
+    isDraggingStart = true;
+		handleMousedown(event, 'start');
+	}
 
-    // Clamp percentage to fit within the [min, max] range
-    setValue((parseFloat((percent * (max - min)) / 100) + min).toFixed(precision));
-  }
+	function handleEndMouseDown(event) {
+    isDraggingEnd = true;
+		handleMousedown(event, 'end');
+	}
 
-  // Handle drags, clicks, and touches as update events
-  function updateValueOnEvent(e) {
-    // Click/touch
-    if (!isDragging && e.type !== "touchstart" && e.type !== "mousedown") {
-      return false;
-    }
+	function handleSelectedRangeMouseDown(event) {
+		handleMousedown(event, 'selectedRange');
+	}
 
-    // Drag
-    if (e.stopPropagation) e.stopPropagation();
-    if (e.preventDefault) e.preventDefault();
-    
-    const clientX = e.type === "touchmove" || e.type === "touchstart" ? e.touches[0].clientX : e.clientX;
-    getValue(clientX);
-  }
+  $: isDraggingEnd && setRange(startValue, endValue);
+  $: isDraggingStart && setRange(startValue, endValue);
+</script>
 
-  $: if (slider) sliderX = slider.getBoundingClientRect().left;
-  $: if (progress && position) {
-    // Clamp value to fit within [min, max] range
-    value = Math.max(min, Math.min(max, value));
-    let percent = ((value - min) * 100) / (max - min);
-    let offsetLeft = (bar.clientWidth - 10) * (percent / 100) + 5;
-
-    // Update current color
-    let currentColor = mix(percent / 100);
-    let rgb = `rgb(${currentColor[0]}, ${currentColor[1]}, ${currentColor[2]})`;
-    wrapper.style = `--current-color: ${rgb}`;
-    
-    // Update current position
-    position.style.left = `${offsetLeft}px`;
-    progress.style.width = `${offsetLeft}px`;
-  }
-  </script>
-  
-<svelte:window
-  on:touchmove|nonpassive={updateValueOnEvent}
-  on:touchcancel={onDragEnd}
-  on:touchend={onDragEnd}
-  on:mousemove={updateValueOnEvent}
-  on:mouseup={onDragEnd}
-  on:resize={resizeWindow}
-/>
-<div class="slider-wrapper" bind:this={wrapper}>
+<div bind:this={wrapper} class="wrapper">
   <p id="min">{min}</p>
-  <div
-    class="slider"
-    tabindex="0"
-    on:keydown={onKeyPress}
-    bind:this={slider}
-    role="slider"
-    aria-valuemin={min}
-    aria-valuemax={max}
-    aria-valuenow={value}
-    {id}
-    on:mousedown={onTrackEvent}
-    on:touchstart={onTrackEvent}
-  >
-    <div class="bar" bind:this={bar}>
-      <div class="progress" bind:this={progress} />
+  <div bind:this={container} class="double-range-container">
+    <div class="slider" bind:this={slider}>
       <div
-        class="position"
-        class:position-drag={isDragging}
-        bind:this={position}
-        on:touchstart={() => isDragging = !!position}
-        on:mousedown={() => isDragging = !!position}
-        on:mouseover={() => (isHovering = true)}
-        on:mouseout={() => (isHovering = false)}
+        class="selected-range"
+        bind:this={selectedRange}
+        on:mousedown|preventDefault|stopPropagation={handleSelectedRangeMouseDown}
+        on:touchstart|preventDefault|stopPropagation={handleSelectedRangeMouseDown}
+        style="
+          left: {startPct * 100}%;
+          right: {(1 - endPct) * 100}%;
+        "
       >
-        {#if isDragging || isHovering}
-          <div
-            class="tooltip"
-            in:fly={{ y: 7, duration: 200 }}
-            out:fade={{ duration: 100 }}
-          >
-            {value}
-          </div>
-        {/if}
+      {#if isDraggingStart || isHoveringStart}
+        <div
+          class="tooltip-start"
+          in:fly={{ y: 7, duration: 200 }}
+          out:fade={{ duration: 100 }}
+        >
+          {startValue.toFixed(precision)}
+        </div>
+      {/if}
       </div>
+      <div
+        class="handle"
+        bind:this={startHandle}
+        data-which="start"
+        on:mousedown|preventDefault|stopPropagation={handleStartMouseDown}
+        on:touchstart|preventDefault|stopPropagation={handleStartMouseDown}
+        on:mouseenter={() => isHoveringStart = true}
+        on:mouseleave={() => isHoveringStart = false}
+        style="
+          left: {startPct * 100}%
+        "
+      ></div>
+      <div
+        class="handle"
+        data-which="end"
+        on:mousedown|preventDefault|stopPropagation={handleEndMouseDown}
+        on:touchstart|preventDefault|stopPropagation={handleEndMouseDown}
+        on:mouseenter={() => isHoveringEnd = true}
+        on:mouseleave={() => isHoveringEnd = false}
+        style="
+          left: {endPct * 100}%
+        "
+      >
+      {#if isDraggingEnd || isHoveringEnd}
+      <div
+        class="tooltip-end"
+        in:fly={{ y: 7, duration: 200 }}
+        out:fade={{ duration: 100 }}
+      >
+        {endValue.toFixed(precision)}
+      </div>
+    {/if}
+    </div>
     </div>
   </div>
   <p id="max">{max}</p>
@@ -188,8 +194,8 @@
     margin-right: 12px;
   }
 
-  .slider-wrapper {
-    --current-color: rgb(52, 130, 232);
+  .wrapper {
+    --start-color: rgb(52, 130, 232);
     display: flex;
     flex-direction: row;
     align-items: center;
@@ -203,29 +209,29 @@
     box-shadow: 2px 2px 12px 4px #d1d1d14b;
   }
 
-  .slider {
+	.double-range-container {
+    --end-color: rgb(232, 52, 148);
+		width: 100%;
+		height: 20px;
+		user-select: none;
+		box-sizing: border-box;
+		white-space: nowrap;
+    display: flex;
+    justify-content: center;
+    
+	}
+	.slider {
+		position: relative;
+		width: calc(100% - 26px);
+		height: 6px;
+		top: 50%;
+		transform: translate(0, -50%);
+		background-color: #e2e2e2;
     box-sizing: border-box;
-    width: 100%;
-    position: relative;
-    padding: 0.5rem;
-    outline: none;
-  }
+		border-radius: 1px;
+	}
 
-  .bar {
-    height: 6px;
-    background: #d0d0d0;
-    border-radius: 6px;
-  }
-
-  .progress {
-    position: absolute;
-    width: 0px;
-    height: 6px;
-    border-radius: 6px;
-    background: linear-gradient(45deg, rgb(52, 130, 232), var(--current-color));
-  }
-
-  .position {
+	.handle {
     position: absolute;
     display: flex;
     justify-content: center;
@@ -240,15 +246,17 @@
       0 1px 1px 0 rgba(0, 0, 0, 0.14),
       0 0px 2px 1px rgba(0, 0, 0, 0.2)
     );
-  }
+    margin-left: -9px;
+	}
 
-  .position-drag {
-    box-shadow: 0 1px 1px 0 rgba(59, 160, 255, 0.14),
-      0 1px 2px 1px rgba(0, 0, 0, 0.2),
-      0 0 0 4px rgba(106, 175, 255, 0.3);
-  }
+	.selected-range {
+		top: 0;
+		position: absolute;
+    background: linear-gradient(45deg, var(--start-color), var(--end-color));
+		bottom: 0;
+	}
 
-  .tooltip {
+  .tooltip-start, .tooltip-end {
     pointer-events: none;
     position: absolute;
     top: 30px;
@@ -257,12 +265,21 @@
     font-weight: 500;
     text-align: center;
     color: white;
-    background: var(--current-color);
     padding: 4px 8px;
     border-radius: 4px;
   }
 
-  .tooltip::after {
+  .tooltip-start {
+    margin-left: -12.5px;
+    margin-top: -8px;
+    background: var(--start-color);
+  }
+
+  .tooltip-end {
+    background: var(--end-color);
+  }
+
+  .tooltip-start::after, .tooltip-end::after {
     content: "";
     display: block;
     position: absolute;
@@ -271,8 +288,17 @@
     top: -3px;
     left: calc(50% - 3px);
     clip-path: polygon(0% 0%, 100% 100%, 0% 100%);
-    background-color: var(--current-color);
+    background-color: var(--start-color);
     transform: rotate(135deg);
     border-radius: 0 0 0 2px;
   }
+  
+  .tooltip-start::after {
+    background-color: var(--start-color);
+  }
+
+  .tooltip-end::after {
+    background-color: var(--end-color);
+  }
+  
 </style>
